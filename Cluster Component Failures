@@ -1,1 +1,64 @@
+kubectl get pods -n kube-system
+kubectl get daemonset -n kube-system
+kubectl get daemonset kube-proxy -n kube-system -o yaml | more +/"^spec:"
+View the logs of one of the kube-proxy pods:
+# proxy_pod_1 is a variable with the name of the first kube-proxy pod
+proxy_pod_1=$(kubectl get pods -n kube-system | grep proxy | cut -d" " -f1 | head -1)
+kubectl logs -n kube-system $proxy_pod_1
+
+Delete the kube-proxy pod and immediately get the daemonsets after:
+kubectl delete pod $proxy_pod_1 -n kube-system
+kubectl get daemonset -n kube-system 
+
+List the system daemonsets to confirm that a new kube-proxy pod is automatically created to replace the deleted one:
+kubectl get daemonset -n kube-system
+
+Connect to the master node using SSH:
+ssh $master_ip
+
+Attempt to change the image that the kube-apiserver pod is using:
+# Get the name of the kube-apiserver pod
+apiserver_pod=$(kubectl get pods -n kube-system | grep apiserver | cut -d" " -f1)
+# change the pod's image to hello-world using the patch command
+kubectl patch pod $apiserver_pod -n kube-system \
+  -p '{"spec":{"containers":[{"name":"kube-apiserver","image":"hello-world"}]}}'
+  
+  Describe the kube-apiserver pod:
+kubectl describe pod $apiserver_pod -n kube-system | more
+
+Get the status of the kubelet and find the config:
+systemctl status kubelet
+
+Output the config file to view the static pod path:
+sudo cat /var/lib/kubelet/config.yaml
+
+List the contents of the /etc/kubernetes/manifests directory:
+ls /etc/kubernetes/manifests
+
+View the contents of the etcd pod specification:
+sudo more /etc/kubernetes/manifests/etcd.yaml
+
+Display the TCP ports that are being listened to on the host network to confirm the etcd endpoint (127.0.0.1:2379) is being listened to:
+ss -tl
+
+Run the following etcdctl (The command-line client for etcd) command in the etcd pod's container by using kubectl exec: as an example of retrieving a value (/registry/clusterrolebindings/cluster-admin) from etcd:
+etcd_pod=$(kubectl get pods -n kube-system | grep ^etcd | cut -d" " -f1)
+kubectl exec -n kube-system $etcd_pod -- \
+  /bin/sh -ec \
+  'ETCDCTL_API=3 \
+   etcdctl \
+   --endpoints=127.0.0.1:2379 \
+   --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+   --cert=/etc/kubernetes/pki/etcd/peer.crt \
+   --key=/etc/kubernetes/pki/etcd/peer.key \
+   get \
+   /registry/clusterrolebindings/cluster-admin
+
+Enter the following command to describe the condition of the master's components:
+for pod in "etcd" "kube-controller-manager" "kube-scheduler"; do 
+  kubectl describe -n kube-system pod $pod | grep -A 5 Conditions:
+done
+
+Display the help for the cluster-info command:
+kubectl cluster-info --help
 
