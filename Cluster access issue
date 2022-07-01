@@ -1,1 +1,17 @@
+echo "source <(kubectl completion bash)" >> ~/.bashrc
+source ~/.bashrc
 
+kubectl get nodes
+cat ~/.kube/config
+kubectl config --help
+kubectl config get-contexts
+kubectl get nodes  again use this command 
+kubectl auth can-i list nodes
+kubectl get clusterroles
+kubectl get clusterrole cluster-admin -o yaml
+kubectl describe clusterrolebinding admin-cluster-binding
+grep "client-cert" ~/.kube/config | \
+  sed 's/\(.*client-certificate-data: \)\(.*\)/\2/' | \
+  base64 --decode \
+  > cert.pem
+openssl x509 -in cert.pem -text -noout
